@@ -17,7 +17,7 @@ import com.google.firebase.firestore.firestore
 
 class MainActivity : AppCompatActivity() {
 
-    var data: MutableList<Map<String,String>> = ArrayList()
+    var data: MutableList<Map<String, String>> = ArrayList()
     val db = Firebase.firestore
     var DataProvinsi = ArrayList<daftarProfinsi>()
     lateinit var lvAdapter: SimpleAdapter
@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         val _btSimpan = findViewById<Button>(R.id.btSimpan)
         val _lvData = findViewById<ListView>(R.id.lvData)
 
-        
+
 
         lvAdapter = SimpleAdapter(
             this,
@@ -47,6 +47,25 @@ class MainActivity : AppCompatActivity() {
             arrayOf<String>("Pro", "Ibu"),
             intArrayOf(android.R.id.text1, android.R.id.text2)
         )
+
+        _lvData.setOnItemLongClickListener { parent, view, position, id ->
+            val namaPro = data[position].get("Pro")
+            if (namaPro != null) {
+                db.collection("tbProvinsi")
+                    .document(namaPro)
+                    .delete()
+                    .addOnSuccessListener {
+                        Log.d("Firebase", "Data berhasil dihapus")
+                        readData(db)
+                    }
+                    .addOnFailureListener {
+                        Log.d("Firebase", it.message.toString())
+                    }
+            }
+
+            true
+
+        }
 
         _lvData.adapter = lvAdapter
 
@@ -57,49 +76,50 @@ class MainActivity : AppCompatActivity() {
         readData(db)
     }
 
-    fun tambahData(db: FirebaseFirestore, Provinsi:String, Ibukota:String){
+    fun tambahData(db: FirebaseFirestore, Provinsi: String, Ibukota: String) {
         val dataBaru = daftarProfinsi(Provinsi, Ibukota)
         db.collection("tbProvinsi")
-            .add(dataBaru)
+            .document(dataBaru.profinsi)
+            .set(dataBaru)
             .addOnSuccessListener {
                 _etProvinsi.setText("")
                 _etIbukota.setText("")
-                Log.d("Firebase", "Data berhasil ditambahkan")
+                Log.d("Firebase", "Data berhasil disimpan")
+                readData(db)
             }
             .addOnFailureListener {
                 Log.d("Firebase", it.message.toString())
             }
     }
 
-fun readData(db: FirebaseFirestore) {
-    db.collection("tbProvinsi")
-        .get()
-        .addOnSuccessListener { result ->
-            DataProvinsi.clear()
+    fun readData(db: FirebaseFirestore) {
+        db.collection("tbProvinsi")
+            .get()
+            .addOnSuccessListener { result ->
+                DataProvinsi.clear()
 
-            for (document in result) {
-                val readData = daftarProfinsi(
-                    document.getString("profinsi").orEmpty(),
-                    document.getString("ibukota").orEmpty()
-                )
-                DataProvinsi.add(readData)
+                for (document in result) {
+                    val readData = daftarProfinsi(
+                        document.getString("profinsi").orEmpty(),
+                        document.getString("ibukota").orEmpty()
+                    )
+                    DataProvinsi.add(readData)
 
-                data.clear()
-                DataProvinsi.forEach{
-                    val dt: MutableMap<String, String> = HashMap(2)
-                    dt["Pro"] = it.profinsi
-                    dt["Ibu"] = it.ibukota
-                    data.add(dt)
+                    data.clear()
+                    DataProvinsi.forEach {
+                        val dt: MutableMap<String, String> = HashMap(2)
+                        dt["Pro"] = it.profinsi
+                        dt["Ibu"] = it.ibukota
+                        data.add(dt)
+                    }
                 }
+
+                lvAdapter.notifyDataSetChanged()
             }
-
-            lvAdapter.notifyDataSetChanged()
-        }
-        .addOnFailureListener {
-            Log.d("Firebase", it.message.toString())
-        }
-}
-
+            .addOnFailureListener {
+                Log.d("Firebase", it.message.toString())
+            }
+    }
 
 
 }
